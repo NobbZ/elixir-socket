@@ -177,51 +177,32 @@ defmodule Socket do
         [{ :active, false } | args]
     end
 
-    if Keyword.has_key?(options, :route) do
-      args = [{ :dontroute, !Keyword.get(options, :route) } | args]
-    end
+    args = if Keyword.has_key?(options, :route), do: [{:dontroute, !Keyword.get(options, :route) } | args], else: args
+    args = if Keyword.get(options, :reuseaddr),  do: [{:reuseaddr, true } | args], else: args
 
-    if Keyword.get(options, :reuseaddr) do
-      args = [{ :reuseaddr, true } | args]
-    end
+    args = if linger = Keyword.get(options, :linger), do: [{ :linger, { true, linger } } | args], else: args
+    args = if priority = Keyword.get(options, :priority), do: [{ :priority, priority } | args], else: args
+    args = if tos = Keyword.get(options, :tos), do: [{ :tos, tos } | args], else: args
 
-    if linger = Keyword.get(options, :linger) do
-      args = [{ :linger, { true, linger } } | args]
-    end
-
-    if priority = Keyword.get(options, :priority) do
-      args = [{ :priority, priority } | args]
-    end
-
-    if tos = Keyword.get(options, :tos) do
-      args = [{ :tos, tos } | args]
-    end
-
-    if send = Keyword.get(options, :send) do
-      case Keyword.get(send, :timeout) do
+    args = if send = Keyword.get(options, :send) do
+      inner = case Keyword.get(send, :timeout) do
         { timeout, :close } ->
-          args = [{ :send_timeout, timeout }, { :send_timeout_close, true } | args]
+          [{ :send_timeout, timeout }, { :send_timeout_close, true } | args]
 
         timeout when timeout |> is_integer ->
-          args = [{ :send_timeout, timeout } | args]
+          [{ :send_timeout, timeout } | args]
       end
 
-      if delay = Keyword.get(send, :delay) do
-        args = [{ :delay_send, delay } | args]
-      end
+      inner = if delay = Keyword.get(send, :delay), do: [{ :delay_send, delay } | inner], else: inner
 
-      if buffer = Keyword.get(send, :buffer) do
-        args = [{ :sndbuf, buffer } | args]
-      end
+      inner = if buffer = Keyword.get(send, :buffer), do: [{ :sndbuf, buffer } | inner], else: inner
     end
 
     if recv = Keyword.get(options, :recv) do
-      if buffer = Keyword.get(recv, :buffer) do
-        args = [{ :recbuf, buffer } | args]
-      end
+      if buffer = Keyword.get(recv, :buffer), do: [{ :recbuf, buffer } | args], else: args
+    else
+      args
     end
-
-    args
   end
 
   use Socket.Helpers
